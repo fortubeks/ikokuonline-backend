@@ -6,11 +6,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use Illuminate\Support\Carbon;
+
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -18,7 +23,13 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'first_name',
+        'last_name',
+        'phone',
+        'email_verification_code',
+        'email_verification_expires_at',
+        'password_reset_otp',
+        'password_reset_expires_at',
         'email',
         'password',
     ];
@@ -44,5 +55,29 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function generateEmailVerificationOtp(): string
+    {
+        $otp = rand(100000, 999999);
+
+        $this->update([
+            'email_verification_code' => $otp,
+            'email_verification_expires_at' => now()->addMinutes(15),
+        ]);
+
+        return $otp;
+    }
+
+    public function generatePasswordResetOtp(): string
+    {
+        $otp = rand(100000, 999999);
+
+        $this->update([
+            'password_reset_otp' => $otp,
+            'password_reset_expires_at' => now()->addMinutes(15),
+        ]);
+
+        return $otp;
     }
 }

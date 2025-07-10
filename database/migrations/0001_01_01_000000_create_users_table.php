@@ -16,9 +16,13 @@ return new class extends Migration
             $table->string('first_name');
             $table->string('last_name');
             $table->string('email')->unique();
+            $table->string('email_verification_code')->nullable();
+            $table->timestamp('email_verification_expires_at')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('phone')->nullable();
             $table->string('password');
+            $table->string('password_reset_otp')->nullable();
+            $table->string('password_reset_expires_at')->nullable();
             $table->enum('user_type', ['admin', 'customer', 'seller'])->default('customer');
             $table->integer('state_id')->nullable();
             $table->integer('country_id')->nullable();
