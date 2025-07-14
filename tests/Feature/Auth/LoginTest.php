@@ -23,7 +23,7 @@ class LoginTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure(['token', 'user']);
+                 ->assertJsonStructure(['user', 'authorisation' => ['token']]);
     }
 
 
@@ -47,8 +47,8 @@ class LoginTest extends TestCase
             ],
         ]);
 
-        $response->assertFalse($response->json('status'));
-        $response->assertEquals('Request Failed', $response->json('message'));
+        $this->assertFalse($response->json('status'));
+        $this->assertEquals('Request Failed', $response->json('message'));
         $response->assertJsonValidationErrors(['email', 'password']);
     }
 
@@ -83,11 +83,11 @@ class LoginTest extends TestCase
             'password' => 'password123',
         ]);
 
-        $response->assertStatus(401);
+        $response->assertStatus(403);
 
         $response->assertJson([
             'status' => false,
-            'message' => 'Email not verified.',
+            'message' => 'Email is not verified.',
         ]);
     }
 
@@ -109,7 +109,7 @@ class LoginTest extends TestCase
 
         $response->assertJson([
             'status' => true,
-            'message' => 'Logged out successfully',
+            'message' => 'Successfully logged out',
         ]);
     }
 

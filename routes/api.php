@@ -7,6 +7,8 @@ use Illuminate\Support\Carbon;
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SocialAuthController;
+use App\Http\Controllers\ProductCategoryController;
+use App\Http\Controllers\ProductController;
 use Laravel\Socialite\Facades\Socialite;
 
 Route::get('/user', function (Request $request) {
@@ -28,6 +30,17 @@ Route::prefix('auth')->group(function () {
 
 
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
-    Route::get('auth/logout', [AuthController::class, 'logout']);
+    Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::post('auth/change-password', [AuthController::class, 'changePassword']);
+});
+
+
+Route::apiResource('products', ProductController::class)->only(['index', 'show']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('product-categories', ProductCategoryController::class);
+
+    Route::apiResource('products', ProductController::class)->only(['store', 'update', 'destroy']);;
+    Route::post('products/{product}/images', [ProductController::class, 'uploadImages']);
+    Route::delete('products/{product}/images/{image}', [ProductController::class, 'deleteImage']);
 });

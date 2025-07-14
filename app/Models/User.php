@@ -63,7 +63,8 @@ class User extends Authenticatable implements MustVerifyEmail
 
         $this->update([
             'email_verification_code' => $otp,
-            'email_verification_expires_at' => now()->addMinutes(15),
+            //'email_verification_expires_at' => now()->addMinutes(15),
+            'email_verification_expires_at' => date("Y-m-d h:i:s",strtotime(" + 15 minutes")),
         ]);
 
         return $otp;
