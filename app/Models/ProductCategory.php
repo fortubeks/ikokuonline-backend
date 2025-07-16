@@ -24,19 +24,41 @@ class ProductCategory extends Model
         return $this->hasMany(ProductCategory::class, 'parent_id');
     }
 
+    public function products()
+    {
+        return $this->hasMany(Product::class);
+    }
+
     protected static function booted()
     {
+        // Slug generation on create
         static::creating(function ($category) {
-            $category->slug = Str::slug($category->name);
+            $category->slug = static::generateUniqueSlug($category->name);
+        });
 
-            // Ensure uniqueness
-            $originalSlug = $category->slug;
-            $count = 1;
-
-            while (static::where('slug', $category->slug)->exists()) {
-                $category->slug = "{$originalSlug}-{$count}";
-                $count++;
+        // Slug regeneration on update only if name is changed
+        static::updating(function ($category) {
+            if ($category->isDirty('name')) {
+                $category->slug = static::generateUniqueSlug($category->name, $category->id);
             }
         });
     }
+
+    protected static function generateUniqueSlug($name, $ignoreId = null)
+    {
+        $slug = Str::slug($name);
+        $originalSlug = $slug;
+        $count = 1;
+
+        while (static::where('slug', $slug)
+            ->when($ignoreId, fn($query) => $query->where('id', '!=', $ignoreId))
+            ->exists()
+        ) {
+            $slug = "{$originalSlug}-{$count}";
+            $count++;
+        }
+
+        return $slug;
+    }
+
 }

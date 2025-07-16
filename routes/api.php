@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\VehicleListingController;
 use Laravel\Socialite\Facades\Socialite;
 
 Route::get('/user', function (Request $request) {
@@ -35,12 +36,36 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 });
 
 
-Route::apiResource('products', ProductController::class)->only(['index', 'show']);
+Route::apiResource('product-categories', ProductCategoryController::class)->only([
+    'index'
+]);
+Route::get('products/{slug}', [ProductController::class, 'showBySlug']);
+Route::apiResource('products', ProductController::class)->only([
+    'index', 'show'
+]);
+Route::get('categories/{slug}/products', [ProductController::class, 'byCategory']);
+
+Route::apiResource('vehicle-listings', VehicleListingController::class)->only([
+    'index', 'show'
+]);
+
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::apiResource('product-categories', ProductCategoryController::class);
-
-    Route::apiResource('products', ProductController::class)->only(['store', 'update', 'destroy']);;
+    Route::apiResource('products', ProductController::class)->only([
+        'store', 'update', 'destroy'
+    ]);
     Route::post('products/{product}/images', [ProductController::class, 'uploadImages']);
     Route::delete('products/{product}/images/{image}', [ProductController::class, 'deleteImage']);
+
+    Route::apiResource('vehicle-listings', VehicleListingController::class)->only([
+        'store', 'update', 'destroy'
+    ]);
+    Route::post('vehicle-listings/{vehicle}/images', [VehicleListingController::class, 'uploadImages']);
+    Route::delete('vehicle-listings/{vehicle}/images/{image}', [VehicleListingController::class, 'deleteImage']);
+});
+
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function(){
+    Route::apiResource('product-categories', ProductCategoryController::class)->only([
+        'store', 'update', 'destroy'
+    ]);
 });

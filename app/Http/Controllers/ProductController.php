@@ -4,146 +4,157 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
+use App\Traits\ApiResponse;
 
 class ProductController extends Controller
 {
-    public function index($request)
-    {
-        $query = Product::with('displayImage');
+    use ApiResponse;
 
-        // Search by name or description
-        if ($search = $request->query('search')) {
+    public function index(Request $request)
+    {
+        $query = Product::with('images');
+
+        if ($search = $request->query('q')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                ->orWhere('description', 'like', "%{$search}%");
+                  ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
-        // Filter by category
         if ($categoryId = $request->query('category_id')) {
             $query->where('product_category_id', $categoryId);
         }
 
-        return $query->latest()->simplePaginate(10)->appends($request->query()); 
+        $products = $query->latest()->simplePaginate(10)->appends($request->query());
+
+        return $this->success($products, 'Products fetched successfully');
     }
 
-    public function store(Request $request)
+    public function store(StoreProductRequest $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string',
-            'description' => 'required|string',
-            'price' => 'required|numeric',
-            'stock' => 'required|integer',
-            'brand' => 'nullable|string',
-            'condition' => 'required|string',
-            'can_negotiate' => 'required|boolean',
-            'product_category_id' => 'nullable|exists:product_categories,id',
-            'car_make_id' => 'nullable|integer',
-            'car_model_id' => 'nullable|integer',
-            'display_image' => 'required|image|max:2048', // image upload
-        ]);
+        $data = $request->validated();
+        $data['user_id'] = $request->user()->id;
 
-        $data['user_id'] = $request->user()->id; // or auth()->id();
-
-        // Create the product
         $product = Product::create($data);
 
-        // Handle display image upload
-        if ($request->hasFile('display_image')) {
-            $path = $request->file('display_image')->store('products', 'local');
-            //$path = $request->file('display_image')->store('products', 's3');
+        $this->uploadImagesToProduct($product, $request->file('images'));
 
-            ProductImage::create([
-                'product_id' => $product->id,
-                'path' => $path,
-                'is_display' => true,
-            ]);
-        }
-
-        return response()->json($product->load('displayImage'), 201);
+        return $this->success($product->load('images'), 'Product created successfully', 201);
     }
-
 
     public function show(Product $product)
     {
-        return $product->load('images');
+        return $this->success($product->load('images'), 'Product retrieved successfully');
     }
 
-    public function update(Request $request, Product $product)
+    
+
+    public function update(UpdateProductRequest $request, Product $product)
     {
-        $data = $request->validate([
-            'name' => 'sometimes|required|string',
-            'description' => 'sometimes|required|string',
-            'slug' => 'sometimes|required|unique:products,slug,' . $product->id,
-            'price' => 'sometimes|required|numeric',
-            'stock' => 'sometimes|required|integer',
-            'brand' => 'nullable|string',
-            'condition' => 'sometimes|required|string',
-            'can_negotiate' => 'sometimes|required|boolean',
-            'product_category_id' => 'nullable|exists:product_categories,id',
-            'car_make_id' => 'nullable|integer',
-            'car_model_id' => 'nullable|integer',
-        ]);
+        $data = $request->validated();
 
         $product->update($data);
 
-        return $product->load('images');
+        if ($request->hasFile('images')) {
+            $this->deleteAllProductImages($product);
+            $this->uploadImagesToProduct($product, $request->file('images'));
+        }
+
+        return $this->success($product->load('images'), 'Product updated successfully');
     }
 
     public function destroy(Product $product)
     {
-        // Also delete images from disk
-        foreach ($product->images as $image) {
-            Storage::delete($image->path);
-        }
-
         $product->delete();
-
-        return response()->noContent();
+        return $this->success(null, 'Product deleted successfully');
     }
 
     public function uploadImages(Request $request, Product $product)
     {
         $request->validate([
-            'images.*' => 'required|image|max:2048', // multiple files
+            'images' => 'required|array|min:1|max:5',
+            'images.*' => 'required|image|max:2048',
             'is_display' => 'nullable|boolean',
         ]);
 
-        $uploaded = [];
+        $existingCount = $product->images()->count();
+        $newCount = count($request->file('images'));
 
-        foreach ($request->file('images', []) as $image) {
-            $path = $image->store('products', 'local'); // stores in storage/app/public/products
-            //$path = $image->store('products', 's3');
-
-            $isDisplay = $request->input('is_display', false);
-
-            // If it's marked as display, unset previous ones
-            if ($isDisplay) {
-                $product->images()->update(['is_display' => false]);
-            }
-
-            $uploaded[] = ProductImage::create([
-                'product_id' => $product->id,
-                'path' => $path,
-                'is_display' => $isDisplay,
+        if ($existingCount + $newCount > 5) {
+            return $this->error('Too many images', [
+                'images' => ['You can only upload a maximum of 5 images.']
             ]);
         }
 
-        return response()->json($uploaded, 201);
+        $this->uploadImagesToProduct($product, $request->file('images'), $request->boolean('is_display'));
+
+        return $this->success($product->images, 'Images uploaded successfully', 201);
     }
 
     public function deleteImage(Product $product, ProductImage $image)
     {
         if ($image->product_id !== $product->id) {
-            return response()->json(['message' => 'Image does not belong to this product.'], 403);
+            return $this->error('Image does not belong to this product.', [], 403);
         }
 
-        Storage::delete($image->path);
+        if ($product->images()->count() <= 1) {
+            return $this->error('Cannot delete the last image of the product.', [], 422);
+        }
+
+        $wasDisplay = $image->is_display;
+
+        Storage::disk('public')->delete($image->path);
         $image->delete();
 
-        return response()->noContent();
+        if ($wasDisplay) {
+            $nextImage = $product->images()->first();
+            if ($nextImage) {
+                $nextImage->update(['is_display' => true]);
+            }
+        }
+
+        return $this->success(null, 'Image deleted successfully');
+    }
+
+    private function uploadImagesToProduct(Product $product, array $images, bool $isDisplay = false): void
+    {
+        $existingCount = $product->images()->count();
+
+        foreach ($images as $index => $image) {
+            $path = $image->store('products', 'public');
+
+            $imageRecord = $product->images()->create([
+                'path' => $path,
+                'is_display' => $isDisplay || ($existingCount + $index === 0),
+            ]);
+
+            if ($isDisplay) {
+                $product->images()
+                        ->where('id', '!=', $imageRecord->id)
+                        ->update(['is_display' => false]);
+            }
+        }
+    }
+
+    private function deleteAllProductImages(Product $product): void
+    {
+        foreach ($product->images as $image) {
+            Storage::disk('public')->delete($image->getRawOriginal('path'));
+            $image->delete();
+        }
+    }
+
+    public function byCategory($slug)
+    {
+        $category = ProductCategory::where('slug', $slug)->firstOrFail();
+
+        $products = $category->products()->with('images')->latest()->paginate(10);
+
+        return $this->success($products, 'Products in category: ' . $category->name);
     }
 }
