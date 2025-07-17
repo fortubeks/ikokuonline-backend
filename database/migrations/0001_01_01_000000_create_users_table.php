@@ -27,6 +27,8 @@ return new class extends Migration
             $table->integer('state_id')->nullable();
             $table->integer('country_id')->nullable();
             $table->rememberToken();
+            $table->timestamp('suspended_at')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
 

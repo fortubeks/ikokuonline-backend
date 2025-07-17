@@ -25,8 +25,8 @@ class Product extends Model
         'user_id'
     ];
 
-    protected $appends = ['display_image_url'];
-    protected $hidden = ['displayImage'];
+    protected $appends = ['display_image_url', 'product_category_slug'];
+    protected $hidden = ['displayImage', 'category'];
 
     /**
      * Get all product images.
@@ -58,7 +58,12 @@ class Product extends Model
      */
     public function category()
     {
-        return $this->belongsTo(ProductCategory::class);
+        return $this->belongsTo(ProductCategory::class, 'product_category_id');
+    }
+
+    public function getProductCategorySlugAttribute()
+    {
+        return $this->category ? $this->category->slug : null;
     }
 
     /**

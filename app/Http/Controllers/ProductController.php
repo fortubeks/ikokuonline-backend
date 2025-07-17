@@ -52,7 +52,14 @@ class ProductController extends Controller
         return $this->success($product->load('images'), 'Product retrieved successfully');
     }
 
-    
+    public function showBySlug($slug)
+    {
+        $product = Product::with('images', 'displayImage', 'category')
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        return $this->success($product, 'Product retrieved successfully');
+    }
 
     public function update(UpdateProductRequest $request, Product $product)
     {

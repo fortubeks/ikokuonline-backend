@@ -53,21 +53,72 @@ class AuthController extends Controller
     
     }
 
+    // public function login(LoginRequest $request)
+    // {
+    //     //input validation is done by AuthRequest form request
+    //     $credentials = $request->safe()->only('email', 'password');
+
+    //     //attempt to log the user in and generate token
+    //     if (!Auth::attempt($credentials)) {
+    //         return response()->json([
+    //             'status' => false,
+    //             'message' => 'Unauthorized',
+    //         ], 401);
+    //     }
+
+    //     $user = Auth::user();
+
+    //     if (is_null($user->email_verified_at)) {
+    //         return response()->json([
+    //             'status' => false,
+    //             'message' => 'Email is not verified.',
+    //         ], 403);
+    //     }
+
+    //     $token = $user->createToken('auth_token')->plainTextToken;
+    //     return response()->json([
+    //             'status' => true,
+    //             'user' => new UserResource($user),
+    //             'authorisation' => [
+    //                 'token' => $token,
+    //                 'type' => 'bearer',
+    //             ]
+    //     ], 200);
+
+    // }
+
+    
     public function login(LoginRequest $request)
     {
-        //input validation is done by AuthRequest form request
         $credentials = $request->safe()->only('email', 'password');
 
-        //attempt to log the user in and generate token
-        if (!Auth::attempt($credentials)) {
+        // Manually retrieve the user (including soft-deleted users)
+        $user = User::withTrashed()->where('email', $credentials['email'])->first();
+
+        if (!$user || !Hash::check($credentials['password'], $user->password)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Unauthorized',
             ], 401);
         }
 
-        $user = Auth::user();
+        // Block login for soft-deleted users
+        if ($user->trashed()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Your account has been deleted.',
+            ], 403);
+        }
 
+        // Block login for suspended users
+        if ($user->is_suspended) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Your account has been suspended.',
+            ], 403);
+        }
+
+        // Block unverified email
         if (is_null($user->email_verified_at)) {
             return response()->json([
                 'status' => false,
@@ -75,17 +126,20 @@ class AuthController extends Controller
             ], 403);
         }
 
+        // Login and generate token
+        Auth::login($user); // manually log user in
         $token = $user->createToken('auth_token')->plainTextToken;
-        return response()->json([
-                'status' => true,
-                'user' => new UserResource($user),
-                'authorisation' => [
-                    'token' => $token,
-                    'type' => 'bearer',
-                ]
-        ], 200);
 
+        return response()->json([
+            'status' => true,
+            'user' => new UserResource($user),
+            'authorisation' => [
+                'token' => $token,
+                'type' => 'bearer',
+            ]
+        ], 200);
     }
+
 
     public function logout(Request $request)
     {

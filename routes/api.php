@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehicleListingController;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -35,13 +36,13 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::post('auth/change-password', [AuthController::class, 'changePassword']);
 });
 
-
+Route::get('product-categories/{slug}', [ProductCategoryController::class, 'showBySlug']);
 Route::apiResource('product-categories', ProductCategoryController::class)->only([
     'index'
 ]);
 Route::get('products/{slug}', [ProductController::class, 'showBySlug']);
 Route::apiResource('products', ProductController::class)->only([
-    'index', 'show'
+    'index'
 ]);
 Route::get('categories/{slug}/products', [ProductController::class, 'byCategory']);
 
@@ -68,4 +69,17 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function(){
     Route::apiResource('product-categories', ProductCategoryController::class)->only([
         'store', 'update', 'destroy'
     ]);
+});
+
+Route::middleware(['auth:sanctum', 'role:admin'])->prefix('users')->group(function () {
+    Route::get('/', [UserController::class, 'index']);
+    Route::get('/suspended', [UserController::class, 'suspended']);
+    Route::get('/deleted', [UserController::class, 'deleted']);
+    Route::get('/{user}', [UserController::class, 'show']);
+
+    Route::patch('/{user}/suspend', [UserController::class, 'suspend']); 
+    Route::patch('/{user}/unsuspend', [UserController::class, 'unsuspend']);
+
+    Route::delete('/{user}', [UserController::class, 'destroy']);
+    Route::patch('/{user}/restore', [UserController::class, 'restore']);
 });

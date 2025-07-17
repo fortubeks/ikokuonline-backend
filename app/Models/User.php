@@ -12,11 +12,12 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use Illuminate\Support\Carbon;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -34,6 +35,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
     ];
+
+    protected $dates = ['suspended_at', 'deleted_at'];
 
     /**
      * The attributes that should be hidden for serialization.

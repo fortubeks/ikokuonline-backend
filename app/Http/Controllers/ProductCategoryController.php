@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\ProductCategory;
 use Illuminate\Http\Request;
 
+use App\Traits\ApiResponse;
+
 class ProductCategoryController extends Controller
 {
+    use ApiResponse;
     public function index()
     {
         return ProductCategory::with('children')->get();
@@ -47,5 +50,13 @@ class ProductCategoryController extends Controller
         $category->delete();
 
         return response()->json(null, 204);
+    }
+
+    public function showBySlug($slug)
+    {
+        $product = ProductCategory::where('slug', $slug)
+            ->firstOrFail();
+
+        return $this->success($product, 'Product retrieved successfully');
     }
 }
