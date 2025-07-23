@@ -30,8 +30,8 @@ class UpdateProductRequest extends FormRequest
             'condition' => 'sometimes|required|string',
             'can_negotiate' => 'sometimes|required|boolean',
             'product_category_id' => 'nullable|exists:product_categories,id',
-            'car_make_id' => 'nullable|integer',
-            'car_model_id' => 'nullable|integer',
+            'car_make_id' => 'required|integer|exists:car_make,id',
+            'car_model_id' => 'required|exists:car_model,id',
             'images' => 'sometimes|required|array|min:1|max:5',
             'images.*' => 'image|max:2048',
         ];

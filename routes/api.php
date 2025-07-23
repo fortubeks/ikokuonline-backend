@@ -11,7 +11,12 @@ use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehicleListingController;
-use Laravel\Socialite\Facades\Socialite;
+use App\Http\Controllers\VehicleFeatureController;
+use App\Http\Controllers\VehicleRequestController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\OrderController;
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -25,6 +30,8 @@ Route::prefix('auth')->group(function () {
     Route::post('email/resend-verification', [AuthController::class, 'resendVerification']);
     Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('reset-password', [AuthController::class, 'resetPassword']);
+
+    Route::post('google', [AuthController::class, 'googleAuth']);
 
     Route::post('{provider}/redirect', [SocialAuthController::class, 'redirect']);
     Route::get('{provider}/callback', [SocialAuthController::class, 'callback']);
@@ -40,16 +47,22 @@ Route::get('product-categories/{slug}', [ProductCategoryController::class, 'show
 Route::apiResource('product-categories', ProductCategoryController::class)->only([
     'index'
 ]);
+
+Route::apiResource('vehicle-features', VehicleFeatureController::class)->only([
+    'index', 'show'
+]);
+
 Route::get('products/{slug}', [ProductController::class, 'showBySlug']);
 Route::apiResource('products', ProductController::class)->only([
     'index'
 ]);
 Route::get('categories/{slug}/products', [ProductController::class, 'byCategory']);
 
+Route::get('vehicle-listings/{slug}', [VehicleListingController::class, 'showBySlug']);
 Route::apiResource('vehicle-listings', VehicleListingController::class)->only([
-    'index', 'show'
+    'index'
 ]);
-
+Route::get('vehicle-listings/search', [VehicleListingController::class, 'search']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('products', ProductController::class)->only([
@@ -69,6 +82,10 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function(){
     Route::apiResource('product-categories', ProductCategoryController::class)->only([
         'store', 'update', 'destroy'
     ]);
+
+    Route::apiResource('vehicle-features', VehicleFeatureController::class)->only([
+        'store', 'update', 'destroy'
+    ]);
 });
 
 Route::middleware(['auth:sanctum', 'role:admin'])->prefix('users')->group(function () {
@@ -83,3 +100,21 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('users')->group(functi
     Route::delete('/{user}', [UserController::class, 'destroy']);
     Route::patch('/{user}/restore', [UserController::class, 'restore']);
 });
+
+Route::apiResource('vehicle-requests', VehicleRequestController::class);
+
+Route::get('/cart', [CartController::class, 'getCart']);
+Route::post('/cart', [CartController::class, 'addToCart']);
+Route::patch('/cart/update/{productId}', [CartController::class, 'updateQuantity']);
+Route::delete('/cart/remove/{productId}', [CartController::class, 'removeFromCart']);
+
+Route::prefix('payments')->group(function () {
+    Route::post('/initialize', [PaymentController::class, 'initialize']);
+    Route::post('/verify', [PaymentController::class, 'verify']);
+});
+
+Route::middleware('api')->group(function () {
+    Route::post('/checkout', [OrderController::class, 'checkout'])->name('order.checkout');
+});
+
+Route::post('/payment/webhook/{provider}', [PaymentWebhookController::class, 'handle']);

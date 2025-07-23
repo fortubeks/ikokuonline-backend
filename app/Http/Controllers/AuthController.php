@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -24,6 +25,8 @@ use App\Http\Resources\UserResource;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
+
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
@@ -315,6 +318,77 @@ class AuthController extends Controller
             'status' => true,
             'message' => 'Password reset successful',
         ]);
+    }
+
+    public function googleAuth(Request $request)
+    {
+        $token = $request->input('id_token');
+
+        try {
+            $googleUser = Socialite::driver('google')->stateless()->userFromToken($token);
+
+            $email = $googleUser->getEmail();
+
+            $fullName = $googleUser->getName();
+            $nameParts = explode(' ', $fullName, 2);
+            $firstName = $nameParts[0] ?? '';
+            $lastName = $nameParts[1] ?? '';
+
+            $user = User::withTrashed()->where('email', $email)->first();
+
+            if (!$user) {
+                $user = User::create([
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'email' => $email,
+                    'google_id' => $googleUser->getId(),
+                    'email_verified_at' => now(),
+                    'avatar' => $googleUser->getAvatar(),
+                    'password' => bcrypt(Str::random(16)),
+                    'phone' => null,
+                ]);
+            } else {
+                $user->update([
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'google_id' => $googleUser->getId(),
+                    'avatar' => $googleUser->getAvatar(),
+                ]);
+            }
+
+            if ($user->trashed()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Your account has been deleted.',
+                ], 403);
+            }
+
+            if ($user->is_suspended) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Your account has been suspended.',
+                ], 403);
+            }
+
+            //Log user in
+            Auth::login($user);
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            return response()->json([
+                'status' => true,
+                'user' => new UserResource($user),
+                'authorisation' => [
+                    'token' => $token,
+                    'type' => 'bearer',
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid Google token',
+            ], 401);
+        }
     }
 
 }

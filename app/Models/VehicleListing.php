@@ -40,6 +40,21 @@ class VehicleListing extends Model
         return optional($image)->path;
     }
 
+    public function carMake()
+    {
+        return $this->belongsTo(CarMake::class);
+    }
+
+    public function carModel()
+    {
+        return $this->belongsTo(CarModel::class);
+    }
+
+    public function features()
+    {
+        return $this->belongsToMany(VehicleFeature::class, 'vehicle_feature_vehicle_listing');
+    }
+
     /**
      * Get the seller that listed the vehicle.
      */
@@ -52,13 +67,16 @@ class VehicleListing extends Model
     {
         // Slug generation on create
         static::creating(function ($listing) {
-            $listing->slug = static::generateUniqueSlug($listing->name);
+            $listing->slug = static::generateSlug($listing);
         });
 
         // Slug regeneration on update only if name is changed
         static::updating(function ($listing) {
-            if ($listing->isDirty('name')) {
-                $listing->slug = static::generateUniqueSlug($listing->name, $listing->id);
+            if (
+                $listing->isDirty(['car_make_id', 'car_model_id', 'year', 'trim', 'color']) ||
+                $listing->slug === null
+            ) {
+                $listing->slug = static::generateSlug($listing);
             }
         });
 
@@ -70,20 +88,31 @@ class VehicleListing extends Model
         });
     }
 
-    protected static function generateUniqueSlug($name, $ignoreId = null)
+    protected static function generateSlug($listing)
     {
-        $slug = Str::slug($name);
-        $originalSlug = $slug;
+        $make = optional($listing->carMake)->name ?? '';
+        $model = optional($listing->carModel)->name ?? '';
+
+        $parts = [
+            $make,
+            $model,
+            $listing->year,
+            $listing->trim,
+            $listing->color,
+            $listing->id ?? Str::random(6), // fallback if ID not available yet
+        ];
+
+        $baseSlug = Str::slug(implode('-', array_filter($parts)));
+
+        // Ensure uniqueness
+        $originalSlug = $baseSlug;
         $count = 1;
 
-        while (static::where('slug', $slug)
-            ->when($ignoreId, fn($query) => $query->where('id', '!=', $ignoreId))
-            ->exists()
-        ) {
-            $slug = "{$originalSlug}-{$count}";
+        while (static::where('slug', $baseSlug)->exists()) {
+            $baseSlug = "{$originalSlug}-{$count}";
             $count++;
         }
 
-        return $slug;
+        return $baseSlug;
     }
 }

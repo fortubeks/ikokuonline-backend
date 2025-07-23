@@ -22,8 +22,8 @@ class UpdateVehicleListingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'car_make_id' => 'nullable|integer',
-            'car_model_id' => 'nullable|integer',
+            'car_make_id' => 'required|integer|exists:car_make,id',
+            'car_model_id' => 'required|exists:car_model,id',
             'year' => 'nullable|integer|min:1900|max:' . now()->year,
             'trim' => 'nullable|string',
             'color' => 'nullable|string',
@@ -34,6 +34,8 @@ class UpdateVehicleListingRequest extends FormRequest
             'price' => 'nullable|numeric|min:0',
             'description' => 'sometimes|required|string',
             'contact_info' => 'nullable|string',
+            'vehicle_features' => 'array',
+            'vehicle_features.*' => 'exists:vehicle_features,id',
             'images' => 'sometimes|required|array|min:1|max:5',
             'images.*' => 'image|max:2048',
         ];

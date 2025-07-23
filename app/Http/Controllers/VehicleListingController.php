@@ -16,7 +16,7 @@ class VehicleListingController extends Controller
 
     public function index(Request $request)
     {
-        $listings = VehicleListing::with('images')->latest()->simplePaginate(10);
+        $listings = VehicleListing::with('images', 'features')->latest()->simplePaginate(10);
         return $this->success($listings, 'Vehicle listings retrieved');
     }
 
@@ -27,15 +27,51 @@ class VehicleListingController extends Controller
 
         $listing = VehicleListing::create($data);
 
+        if ($request->filled('vehicle_features')) {
+            $listing->features()->sync($request->features);
+        }
+
         $this->uploadImage($listing, $request->file('images'));
 
-        return $this->success($listing->load('images'), 'Vehicle listing created', 201);
+        return $this->success($listing->load(['images', 'features']), 'Vehicle listing created', 201);
     }
 
     public function show(VehicleListing $vehicleListing)
     {
-        return $this->success($vehicleListing->load('images'), 'Vehicle listing retrieved');
+        return $this->success($vehicleListing->load(['images', 'features']), 'Vehicle listing retrieved');
     }
+
+    public function showBySlug($slug)
+    {
+        $vehicleListing = VehicleListing::with('images', 'displayImage', 'features')
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        return $this->success($vehicleListing, 'Vehicle listing retrieved successfully');
+    }
+
+    public function search(Request $request)
+    {
+        $query = VehicleListing::query();
+
+        if ($term = $request->input('q')) {
+            $query->where(function ($q) use ($term) {
+                $q->where('description', 'like', "%$term%")
+                ->orWhere('vin', 'like', "%$term%")
+                ->orWhere('trim', 'like', "%$term%")
+                ->orWhere('color', 'like', "%$term%")
+                ->orWhereHas('carMake', fn($q) => $q->where('name', 'like', "%$term%"))
+                ->orWhereHas('carModel', fn($q) => $q->where('name', 'like', "%$term%"));
+            });
+        }
+
+        $results = $query->with(['carMake', 'carModel', 'images', 'features'])
+                        ->latest()
+                        ->simplePaginate(10);
+
+        return $this->success($results, 'Vehicle listings search results.');
+    }
+
 
     public function update(UpdateVehicleListingRequest $request, VehicleListing $vehicleListing)
     {
@@ -46,7 +82,11 @@ class VehicleListingController extends Controller
             $this->uploadImage($vehicleListing, $request->file('images'));
         }
 
-        return $this->success($vehicleListing->load('images'), 'Vehicle listing updated');
+        if ($request->filled('features')) {
+            $vehicleListing->features()->sync($request->features); // Replace all
+        }
+
+        return $this->success($vehicleListing->load(['images', 'features']), 'Vehicle listing updated');
     }
 
     public function destroy(VehicleListing $vehicleListing)

@@ -34,6 +34,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password_reset_expires_at',
         'email',
         'password',
+        'google_id', 'avatar',
     ];
 
     protected $dates = ['suspended_at', 'deleted_at'];

@@ -26,12 +26,12 @@ class StoreProductRequest extends FormRequest
             'description' => 'required|string',
             'price' => 'required|numeric',
             'stock' => 'required|integer',
-            'brand' => 'nullable|string',
+            'brand' => 'required|string',
             'condition' => 'required|string',
             'can_negotiate' => 'required|boolean',
-            'product_category_id' => 'nullable|exists:product_categories,id',
-            'car_make_id' => 'nullable|integer',
-            'car_model_id' => 'nullable|integer',
+            'product_category_id' => 'required|exists:product_categories,id',
+            'car_make_id' => 'required|integer|exists:car_makes,id',
+            'car_model_id' => 'required|exists:car_models,id',
             'images' => 'required|array|min:1|max:5',
             'images.*' => 'image|max:2048', // each image must be valid
         ];
