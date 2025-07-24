@@ -16,6 +16,8 @@ use App\Http\Controllers\VehicleRequestController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PaymentWebhookController;
+use App\Http\Controllers\SellerController;
 
 
 Route::get('/user', function (Request $request) {
@@ -118,3 +120,10 @@ Route::middleware('api')->group(function () {
 });
 
 Route::post('/payment/webhook/{provider}', [PaymentWebhookController::class, 'handle']);
+
+Route::middleware('auth:sanctum')->prefix('seller')->group(function () {
+    Route::post('/register', [SellerController::class, 'register']);
+    Route::put('/seller/{id}', [SellerController::class, 'update']);
+    Route::delete('/seller/{id}', [SellerController::class, 'destroy']);
+    Route::get('/profile', [SellerController::class, 'profile']);
+});

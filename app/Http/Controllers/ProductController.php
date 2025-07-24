@@ -38,7 +38,8 @@ class ProductController extends Controller
     public function store(StoreProductRequest $request)
     {
         $data = $request->validated();
-        $data['user_id'] = $request->user()->id;
+        //$data['user_id'] = $request->user()->id;
+        $data['seller_id'] = $request->user()->seller()->id;
 
         $product = Product::create($data);
 

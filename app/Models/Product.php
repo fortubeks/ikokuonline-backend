@@ -22,7 +22,7 @@ class Product extends Model
         'product_category_id',
         'car_make_id',
         'car_model_id',
-        'user_id'
+        'seller_id'
     ];
 
     protected $appends = ['display_image_url', 'product_category_slug'];
