@@ -5,6 +5,8 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
 use App\Http\Middleware\ForceJsonResponse;
+use Illuminate\Console\Scheduling\Schedule;
+use Laravel\Sanctum\PersonalAccessToken;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'check.token.expiration' => \App\Http\Middleware\CheckTokenExpiration::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -65,4 +68,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 401);
             }
         });
+    })
+    ->withSchedule(function (Schedule $schedule) {
+        PersonalAccessToken::where('expires_at', '<', now())->delete();
     })->create();

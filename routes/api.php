@@ -18,6 +18,9 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\SellerController;
+use App\Http\Controllers\UserOrderController;
+use App\Http\Controllers\UserAccountController;
+use App\Http\Controllers\ContactController;
 
 
 Route::get('/user', function (Request $request) {
@@ -121,9 +124,22 @@ Route::middleware('api')->group(function () {
 
 Route::post('/payment/webhook/{provider}', [PaymentWebhookController::class, 'handle']);
 
-Route::middleware('auth:sanctum')->prefix('seller')->group(function () {
+Route::middleware(['auth:sanctum', 'check.token.expiration'])->prefix('seller')->group(function () {
     Route::post('/register', [SellerController::class, 'register']);
     Route::put('/seller/{id}', [SellerController::class, 'update']);
     Route::delete('/seller/{id}', [SellerController::class, 'destroy']);
     Route::get('/profile', [SellerController::class, 'profile']);
+
+    // Orders
+    Route::get('/orders', [UserOrderController::class, 'index']);
+    Route::get('/orders/{order}', [UserOrderController::class, 'show']);
+    Route::put('/orders/{order}', [UserOrderController::class, 'update']);
+    Route::delete('/orders/{order}', [UserOrderController::class, 'destroy']);
+
+    // Account
+    Route::get('/account', [UserAccountController::class, 'show']);
+    Route::put('/account', [UserAccountController::class, 'update']);
+    Route::delete('/account', [UserAccountController::class, 'destroy']);
 });
+
+Route::post('/contact', [ContactController::class, 'store']);

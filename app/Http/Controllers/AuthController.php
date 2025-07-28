@@ -372,7 +372,11 @@ class AuthController extends Controller
 
             //Log user in
             Auth::login($user);
-            $token = $user->createToken('auth_token')->plainTextToken;
+            $token = $user->createToken(
+                'auth_token',
+                ['*'],
+                now()->addWeek()
+            )->plainTextToken;
 
             return response()->json([
                 'status' => true,
