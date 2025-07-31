@@ -26,6 +26,7 @@ return new class extends Migration
             $table->enum('user_type', ['admin', 'customer', 'seller'])->default('customer');
             $table->integer('state_id')->nullable();
             $table->integer('country_id')->nullable();
+            $table->string('google_id')->nullable();
             $table->rememberToken();
             $table->timestamp('suspended_at')->nullable();
             $table->softDeletes();

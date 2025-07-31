@@ -21,16 +21,17 @@ use App\Http\Controllers\SellerController;
 use App\Http\Controllers\UserOrderController;
 use App\Http\Controllers\UserAccountController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\CarMakeController;
+use App\Http\Controllers\CarModelController;
 
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum', 'verified');
+Route::get('/auth/user', [AuthController::class, 'getUser'])
+    ->middleware('auth:sanctum', 'verified');
 
 
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
-    Route::post('login',    [AuthController::class, 'login']);
+    //Route::post('login',    [AuthController::class, 'login']);
     Route::post('email/verify', [AuthController::class, 'verifyEmail']);
     Route::post('email/resend-verification', [AuthController::class, 'resendVerification']);
     Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
@@ -41,6 +42,8 @@ Route::prefix('auth')->group(function () {
     Route::post('{provider}/redirect', [SocialAuthController::class, 'redirect']);
     Route::get('{provider}/callback', [SocialAuthController::class, 'callback']);
 });
+
+Route::post('/auth/login', [AuthController::class, 'login']);
 
 
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
@@ -69,10 +72,13 @@ Route::apiResource('vehicle-listings', VehicleListingController::class)->only([
 ]);
 Route::get('vehicle-listings/search', [VehicleListingController::class, 'search']);
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'role:seller'])->group(function () {
     Route::apiResource('products', ProductController::class)->only([
         'store', 'update', 'destroy'
     ]);
+});    
+
+Route::middleware('auth:sanctum')->group(function () {
     Route::post('products/{product}/images', [ProductController::class, 'uploadImages']);
     Route::delete('products/{product}/images/{image}', [ProductController::class, 'deleteImage']);
 
@@ -143,3 +149,6 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->prefix('seller')-
 });
 
 Route::post('/contact', [ContactController::class, 'store']);
+
+Route::get('/car-makes/search', [CarMakeController::class, 'search']);
+Route::get('/car-models/search', [CarModelController::class, 'search']);
