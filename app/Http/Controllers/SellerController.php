@@ -30,7 +30,8 @@ class SellerController extends Controller
             'address'    => $request->address,
             'image_url'  => $request->image_url,
         ]);
-
+        
+        $user->assignRole('seller');
         return $this->success($seller, 'Seller account created successfully', 201);
     }
 

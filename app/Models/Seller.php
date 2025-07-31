@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 class Seller extends Model
 {
+    use  HasFactory, HasRoles, SoftDeletes;
     protected $fillable = [
         'store_name',
         'slug',

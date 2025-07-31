@@ -11,15 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Schema::create('car_models', function (Blueprint $table) {
-        //     $table->id();
-        //     $table->unsignedBigInteger('external_id');
-        //     $table->foreignId('car_make_id')->constrained()->cascadeOnDelete();
-        //     $table->string('name');
-        //     $table->timestamps();
+        Schema::create('car_models', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('external_id');
+            $table->foreignId('car_make_id')->constrained()->cascadeOnDelete();
+            $table->string('name');
+            $table->timestamps();
 
-        //     $table->unique(['external_id', 'car_make_id']);
-        // });
+            $table->unique(['external_id', 'car_make_id']);
+        });
     }
 
     /**

@@ -25,6 +25,7 @@ use App\Http\Resources\UserResource;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Http;
 
 use Laravel\Socialite\Facades\Socialite;
 
@@ -91,12 +92,64 @@ class AuthController extends Controller
     // }
 
     
+    // public function login_old(LoginRequest $request)
+    // {
+    //     $credentials = $request->safe()->only('email', 'password');
+
+    //     // Manually retrieve the user (including soft-deleted users)
+    //     $user = User::withTrashed()->where('email', $credentials['email'])->first();
+
+    //     if (!$user || !Hash::check($credentials['password'], $user->password)) {
+    //         return response()->json([
+    //             'status' => false,
+    //             'message' => 'Unauthorized',
+    //         ], 401);
+    //     }
+
+    //     // Block login for soft-deleted users
+    //     if ($user->trashed()) {
+    //         return response()->json([
+    //             'status' => false,
+    //             'message' => 'Your account has been deleted.',
+    //         ], 403);
+    //     }
+
+    //     // Block login for suspended users
+    //     if ($user->is_suspended) {
+    //         return response()->json([
+    //             'status' => false,
+    //             'message' => 'Your account has been suspended.',
+    //         ], 403);
+    //     }
+
+    //     // Block unverified email
+    //     if (is_null($user->email_verified_at)) {
+    //         return response()->json([
+    //             'status' => false,
+    //             'message' => 'Email is not verified.',
+    //         ], 403);
+    //     }
+
+    //     // Login and generate token
+    //     Auth::login($user); // manually log user in
+    //     $token = $user->createToken('auth_token')->plainTextToken;
+
+    //     return response()->json([
+    //         'status' => true,
+    //         'user' => new UserResource($user),
+    //         'authorisation' => [
+    //             'token' => $token,
+    //             'type' => 'bearer',
+    //         ]
+    //     ], 200);
+    // }
+
     public function login(LoginRequest $request)
     {
         $credentials = $request->safe()->only('email', 'password');
 
-        // Manually retrieve the user (including soft-deleted users)
-        $user = User::withTrashed()->where('email', $credentials['email'])->first();
+        // Manually retrieve the user 
+        $user = User::where('email', $credentials['email'])->first();
 
         if (!$user || !Hash::check($credentials['password'], $user->password)) {
             return response()->json([
@@ -105,12 +158,11 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // Block login for soft-deleted users
-        if ($user->trashed()) {
+        if (!Auth::attempt($credentials)) {
             return response()->json([
                 'status' => false,
-                'message' => 'Your account has been deleted.',
-            ], 403);
+                'message' => 'Invalid credentials'
+            ], 401);
         }
 
         // Block login for suspended users
@@ -129,24 +181,23 @@ class AuthController extends Controller
             ], 403);
         }
 
-        // Login and generate token
-        Auth::login($user); // manually log user in
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $request->session()->regenerate();
 
         return response()->json([
             'status' => true,
             'user' => new UserResource($user),
-            'authorisation' => [
-                'token' => $token,
-                'type' => 'bearer',
-            ]
-        ], 200);
+            'message' => 'Logged in'
+        ]);
     }
 
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        //$request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return response()->json([
             'status' => true,
             'message' => 'Successfully logged out',
@@ -267,7 +318,7 @@ class AuthController extends Controller
             'password' => Hash::make($request->new_password),
         ]);
 
-        $request->user()->tokens()->delete();
+        //$request->user()->tokens()->delete();
 
         return response()->json([
             'status' => true,
@@ -325,25 +376,44 @@ class AuthController extends Controller
         $token = $request->input('id_token');
 
         try {
-            $googleUser = Socialite::driver('google')->stateless()->userFromToken($token);
+            //$googleUser = Socialite::driver('google')->stateless()->userFromToken($token);
+            //$googleUser = Socialite::driver('google')->userFromToken($token);
 
-            $email = $googleUser->getEmail();
+            $idToken = $request->input('id_token');
 
-            $fullName = $googleUser->getName();
+            if (!$idToken) {
+                return response()->json(['status' => false, 'message' => 'Missing ID token'], 422);
+            }
+
+            // Verify the token via Google
+            $response = Http::get('https://oauth2.googleapis.com/tokeninfo', [
+                'id_token' => $idToken,
+            ]);
+
+            if ($response->failed()) {
+                return response()->json(['status' => false,'message' => 'Invalid ID token'], 401);
+            }
+
+            $googleUser = $response->json();
+
+
+            $email = $googleUser['email'];
+
+            $fullName = $googleUser['name'];
             $nameParts = explode(' ', $fullName, 2);
             $firstName = $nameParts[0] ?? '';
             $lastName = $nameParts[1] ?? '';
 
-            $user = User::withTrashed()->where('email', $email)->first();
+            $user = User::where('email', $email)->first();
 
             if (!$user) {
                 $user = User::create([
-                    'first_name' => $firstName,
-                    'last_name' => $lastName,
+                    'first_name' =>ucfirst($firstName),
+                    'last_name' => ucfirst($lastName),
                     'email' => $email,
-                    'google_id' => $googleUser->getId(),
+                    'google_id' => $googleUser['sub'],
                     'email_verified_at' => now(),
-                    'avatar' => $googleUser->getAvatar(),
+                    //'avatar' => $googleUser['picture'],
                     'password' => bcrypt(Str::random(16)),
                     'phone' => null,
                 ]);
@@ -351,17 +421,18 @@ class AuthController extends Controller
                 $user->update([
                     'first_name' => $firstName,
                     'last_name' => $lastName,
-                    'google_id' => $googleUser->getId(),
-                    'avatar' => $googleUser->getAvatar(),
+                    'google_id' => $googleUser['sub'],
+                    //'avatar' => $googleUser['picture'],
                 ]);
+                //You should only update if these fields change
             }
 
-            if ($user->trashed()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Your account has been deleted.',
-                ], 403);
-            }
+            // if ($user->trashed()) {
+            //     return response()->json([
+            //         'status' => false,
+            //         'message' => 'Your account has been deleted.',
+            //     ], 403);
+            // }
 
             if ($user->is_suspended) {
                 return response()->json([
@@ -372,27 +443,45 @@ class AuthController extends Controller
 
             //Log user in
             Auth::login($user);
-            $token = $user->createToken(
-                'auth_token',
-                ['*'],
-                now()->addWeek()
-            )->plainTextToken;
+            // $token = $user->createToken(
+            //     'auth_token',
+            //     ['*'],
+            //     now()->addWeek()
+            // )->plainTextToken;
+
+            $request->session()->regenerate();
 
             return response()->json([
                 'status' => true,
                 'user' => new UserResource($user),
-                'authorisation' => [
-                    'token' => $token,
-                    'type' => 'bearer',
-                ]
-            ]);
+                'message' => 'Logged in'
+            ], 200);
+
+            // return response()->json([
+            //     'status' => true,
+            //     'user' => new UserResource($user),
+            //     'authorisation' => [
+            //         'token' => $token,
+            //         'type' => 'bearer',
+            //     ]
+            // ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
-                'message' => 'Invalid Google token',
+                'message' => 'Invalid Google token: '.$e->getMessage(),
             ], 401);
         }
+    }
+
+    public function getUser(Request $request)
+    {
+        $user = $request->user();
+        return response()->json([
+                'status' => true,
+                'message' => 'User retrieved successfully',
+                'user' => new UserResource($user),
+            ], 200);
     }
 
 }

@@ -32,7 +32,7 @@ class StoreProductRequest extends FormRequest
             'product_category_id' => 'required|exists:product_categories,id',
             'car_make_id' => 'required|integer|exists:car_makes,id',
             'car_model_id' => 'required|exists:car_models,id',
-            'images' => 'required|array|min:1|max:5',
+            'images' => 'array|min:1|max:5',
             'images.*' => 'image|max:2048', // each image must be valid
         ];
     }

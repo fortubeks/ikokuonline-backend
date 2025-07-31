@@ -28,13 +28,15 @@ class User extends Authenticatable implements MustVerifyEmail
         'first_name',
         'last_name',
         'phone',
+        'email_verified_at',
         'email_verification_code',
         'email_verification_expires_at',
         'password_reset_otp',
         'password_reset_expires_at',
         'email',
         'password',
-        'google_id', 'avatar',
+        'google_id', 
+        //'avatar',
     ];
 
     protected $dates = ['suspended_at', 'deleted_at'];

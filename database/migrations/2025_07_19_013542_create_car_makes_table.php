@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Schema::create('car_makes', function (Blueprint $table) {
-        //     $table->id();
-        //     $table->string('name')->unique(); // e.g. Toyota, Honda
-        //     $table->timestamps();
-        // });
+        Schema::create('car_makes', function (Blueprint $table) {
+            $table->id();
+            $table->string('name')->unique(); // e.g. Toyota, Honda
+            $table->timestamps();
+        });
     }
 
     /**

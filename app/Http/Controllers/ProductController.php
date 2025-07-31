@@ -37,13 +37,15 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request)
     {
+        //This function should be validated to ensure only sellers can accesss
+        //use gate, policy, or role:seller
         $data = $request->validated();
         //$data['user_id'] = $request->user()->id;
-        $data['seller_id'] = $request->user()->seller()->id;
+        $data['seller_id'] = $request->user()->seller->id;
 
         $product = Product::create($data);
 
-        $this->uploadImagesToProduct($product, $request->file('images'));
+        //$this->uploadImagesToProduct($product, $request->file('images'));
 
         return $this->success($product->load('images'), 'Product created successfully', 201);
     }
