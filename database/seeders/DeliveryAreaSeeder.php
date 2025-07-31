@@ -42,7 +42,10 @@ class DeliveryAreaSeeder extends Seeder
         ];
 
         foreach ($areas as $stateName => $areaList) {
-            $state = State::where('name', $stateName)->where('country_id', 161)->first();
+            $state = \DB::table('states')
+                ->where('name', $stateName)
+                ->where('country_id', 161)
+                ->first();
 
             if ($state) {
                 foreach ($areaList as $area) {
