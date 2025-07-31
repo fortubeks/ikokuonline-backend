@@ -16,6 +16,8 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Seller
             $table->unsignedBigInteger('car_make_id')->nullable(); //Toyota
             $table->unsignedBigInteger('car_model_id')->nullable(); //Camry
+            $table->string('slug')->unique();
+            $table->enum('status', ['available', 'sold'])->default('available');
             $table->year('year')->nullable();
             $table->string('trim')->nullable();
             $table->string('color')->nullable();

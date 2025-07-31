@@ -11,11 +11,13 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use Illuminate\Support\Carbon;
+use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -32,7 +34,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'password_reset_expires_at',
         'email',
         'password',
+        'google_id', 'avatar',
     ];
+
+    protected $dates = ['suspended_at', 'deleted_at'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -43,6 +48,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'remember_token',
     ];
+
+    public function seller() {
+        return $this->hasOne(Seller::class);
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -63,7 +72,8 @@ class User extends Authenticatable implements MustVerifyEmail
 
         $this->update([
             'email_verification_code' => $otp,
-            'email_verification_expires_at' => now()->addMinutes(15),
+            //'email_verification_expires_at' => now()->addMinutes(15),
+            'email_verification_expires_at' => date("Y-m-d h:i:s",strtotime(" + 15 minutes")),
         ]);
 
         return $otp;

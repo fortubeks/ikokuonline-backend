@@ -3,21 +3,23 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Seller extends Model
 {
     protected $fillable = [
-        'name',
+        'store_name',
+        'slug',
+        'description',
         'email',
         'phone',
         'address',
-        'city',
-        'state',
-        'country',
-        'postal_code',
-        'description',
-        'image_url',
+        'image_url'
     ];
+
+    public function user() {
+        return $this->belongsTo(User::class);
+    }
 
     /**
      * Get the products for the seller.
@@ -33,5 +35,14 @@ class Seller extends Model
     public function reviews()
     {
         return $this->morphMany(Review::class, 'reviewable');
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($seller) {
+            $seller->slug = Str::slug($seller->store_name) . '-' . uniqid();
+        });
     }
 }
