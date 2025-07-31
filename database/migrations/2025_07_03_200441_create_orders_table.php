@@ -23,7 +23,6 @@ return new class extends Migration
             $table->unsignedBigInteger('state_id')->nullable();
             $table->foreignId('delivery_area_id')->nullable()->constrained();
             $table->decimal('delivery_fee', 10, 2)->default(0);
-            $table->string('status')->default('pending');
             $table->timestamps();
         });
     }
