@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('APP_FRONTEND_URL', 'http://localhost:5173')],
+    'allowed_origins' => [env('APP_FRONTEND_URL', 'http://localhost:5173', 'https://staging.ikokuonline.com')],
 
     'allowed_origins_patterns' => [],
 
