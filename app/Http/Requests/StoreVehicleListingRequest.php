@@ -22,8 +22,8 @@ class StoreVehicleListingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'car_make_id' => 'required|integer|exists:car_make,id',
-            'car_model_id' => 'required|exists:car_model,id',
+            'car_make_id' => 'nullable|integer|exists:car_make,id',
+            'car_model_id' => 'nullable|exists:car_model,id',
             'year' => 'integer|min:1900|max:' . now()->year,
             'trim' => 'string',
             'color' => 'string',

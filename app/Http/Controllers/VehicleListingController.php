@@ -31,9 +31,16 @@ class VehicleListingController extends Controller
             $listing->features()->sync($request->features);
         }
 
-        $this->uploadImage($listing, $request->file('images'));
+        if ($request->hasFile('images')) {
+            $this->uploadImage($listing, $request->file('images'));
+        }
 
         return $this->success($listing->load(['images', 'features']), 'Vehicle listing created', 201);
+    }
+
+    public function edit($id)
+    {
+        return VehicleListing::with('images', 'features')->findOrFail($id);
     }
 
     public function show(VehicleListing $vehicleListing)
@@ -57,17 +64,17 @@ class VehicleListingController extends Controller
         if ($term = $request->input('q')) {
             $query->where(function ($q) use ($term) {
                 $q->where('description', 'like', "%$term%")
-                ->orWhere('vin', 'like', "%$term%")
-                ->orWhere('trim', 'like', "%$term%")
-                ->orWhere('color', 'like', "%$term%")
-                ->orWhereHas('carMake', fn($q) => $q->where('name', 'like', "%$term%"))
-                ->orWhereHas('carModel', fn($q) => $q->where('name', 'like', "%$term%"));
+                    ->orWhere('vin', 'like', "%$term%")
+                    ->orWhere('trim', 'like', "%$term%")
+                    ->orWhere('color', 'like', "%$term%")
+                    ->orWhereHas('carMake', fn($q) => $q->where('name', 'like', "%$term%"))
+                    ->orWhereHas('carModel', fn($q) => $q->where('name', 'like', "%$term%"));
             });
         }
 
         $results = $query->with(['carMake', 'carModel', 'images', 'features'])
-                        ->latest()
-                        ->simplePaginate(10);
+            ->latest()
+            ->simplePaginate(10);
 
         return $this->success($results, 'Vehicle listings search results.');
     }

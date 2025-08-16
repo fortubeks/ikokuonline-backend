@@ -20,6 +20,11 @@ class ProductCategoryController extends Controller
         return ProductCategory::with('children')->findOrFail($id);
     }
 
+    public function edit($id)
+    {
+        return ProductCategory::with('children')->findOrFail($id);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

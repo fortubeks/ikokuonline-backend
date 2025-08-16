@@ -22,7 +22,7 @@ class ProductController extends Controller
         if ($search = $request->query('q')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
@@ -48,6 +48,11 @@ class ProductController extends Controller
         //$this->uploadImagesToProduct($product, $request->file('images'));
 
         return $this->success($product->load('images'), 'Product created successfully', 201);
+    }
+
+    public function edit($id)
+    {
+        return Product::with('images')->findOrFail($id);
     }
 
     public function show(Product $product)
@@ -145,8 +150,8 @@ class ProductController extends Controller
 
             if ($isDisplay) {
                 $product->images()
-                        ->where('id', '!=', $imageRecord->id)
-                        ->update(['is_display' => false]);
+                    ->where('id', '!=', $imageRecord->id)
+                    ->update(['is_display' => false]);
             }
         }
     }

@@ -57,7 +57,8 @@ Route::apiResource('product-categories', ProductCategoryController::class)->only
 ]);
 
 Route::apiResource('vehicle-features', VehicleFeatureController::class)->only([
-    'index', 'show'
+    'index',
+    'show'
 ]);
 
 Route::get('products/{slug}', [ProductController::class, 'showBySlug']);
@@ -74,28 +75,40 @@ Route::get('vehicle-listings/search', [VehicleListingController::class, 'search'
 
 Route::middleware(['auth:sanctum', 'role:seller'])->group(function () {
     Route::apiResource('products', ProductController::class)->only([
-        'store', 'update', 'destroy'
+        'store',
+        'edit',
+        'update',
+        'destroy'
     ]);
-});    
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('products/{product}/images', [ProductController::class, 'uploadImages']);
     Route::delete('products/{product}/images/{image}', [ProductController::class, 'deleteImage']);
 
     Route::apiResource('vehicle-listings', VehicleListingController::class)->only([
-        'store', 'update', 'destroy'
+        'store',
+        'edit',
+        'update',
+        'destroy'
     ]);
     Route::post('vehicle-listings/{vehicle}/images', [VehicleListingController::class, 'uploadImages']);
     Route::delete('vehicle-listings/{vehicle}/images/{image}', [VehicleListingController::class, 'deleteImage']);
 });
 
-Route::middleware(['auth:sanctum', 'role:admin'])->group(function(){
+Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('product-categories', ProductCategoryController::class)->only([
-        'store', 'update', 'destroy'
+        'store',
+        'edit',
+        'update',
+        'destroy'
     ]);
 
     Route::apiResource('vehicle-features', VehicleFeatureController::class)->only([
-        'store', 'update', 'destroy'
+        'store',
+        'edit',
+        'update',
+        'destroy'
     ]);
 });
 
@@ -105,7 +118,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('users')->group(functi
     Route::get('/deleted', [UserController::class, 'deleted']);
     Route::get('/{user}', [UserController::class, 'show']);
 
-    Route::patch('/{user}/suspend', [UserController::class, 'suspend']); 
+    Route::patch('/{user}/suspend', [UserController::class, 'suspend']);
     Route::patch('/{user}/unsuspend', [UserController::class, 'unsuspend']);
 
     Route::delete('/{user}', [UserController::class, 'destroy']);
